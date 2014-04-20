@@ -19,5 +19,19 @@ insertVertex !v (Graph vs es) = Graph (HS.insert v vs) es
 
 insertEdge :: (Eq v, Eq e, Hashable v, Hashable e) => 
   e -> (v, v) -> Graph e v -> Graph e v 
-insertEdge !e (v, v') (Graph vs es) = 
+insertEdge !e !(v, v') (Graph vs es) = 
   foldr insertVertex (Graph vs (HM.insert e (v, v') es)) [v, v']
+
+connections :: (Eq v) => v -> Graph e v -> [(e, (v, v))]
+connections !v (Graph _ es) = 
+  HM.toList $ HM.filter (\(v1, v2) -> any (==v) [v1, v2]) es
+
+neighbors :: Eq v => v -> Graph e v -> [v]
+neighbors v (Graph _ es) = 
+  HM.foldlWithKey'
+  (\acc e (v1, v2) -> if v == v2 then (v1:acc) else if v == v1 then (v2:acc) else acc)
+  []
+  es
+
+adjacentVertices :: (Eq e, Hashable e) => e -> Graph e v -> Maybe (v, v)
+adjacentVertices !e (Graph _ es) = HM.lookup e es
