@@ -1,15 +1,18 @@
 
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE BangPatterns, TemplateHaskell #-}
 module Graphene.Graph where
 
 import qualified Data.HashSet      as HS
 import qualified Data.HashMap.Lazy as HM
 import Data.Hashable
+import Control.Lens
 
 data Graph e v = Graph
-  { vertices :: HS.HashSet v
-  , edges    :: HM.HashMap e (v, v)
+  { _vertices :: HS.HashSet v
+  , _edges    :: HM.HashMap e (v, v)
   } deriving (Show, Eq)
+
+makeLenses ''Graph
 
 emptyGraph :: Graph e v
 emptyGraph = Graph HS.empty HM.empty
@@ -35,3 +38,7 @@ neighbors v (Graph _ es) =
 
 adjacentVertices :: (Eq e, Hashable e) => e -> Graph e v -> Maybe (v, v)
 adjacentVertices !e (Graph _ es) = HM.lookup e es
+
+fromLists :: (Hashable e, Hashable v, Eq e, Eq v) => [v] -> [(e, v, v)] -> Graph e v
+fromLists vs es = foldr insertVertex edgeGraph vs
+  where edgeGraph = foldr (\(e, v1, v2) -> insertEdge e (v1, v2)) emptyGraph es
