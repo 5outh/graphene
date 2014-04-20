@@ -21,6 +21,12 @@ emptyGraph = Graph HS.empty HM.empty
 insertVertex :: (Eq v, Hashable v) => v -> Graph e v -> Graph e v
 insertVertex !v (Graph vs es) = Graph (HS.insert v vs) es
 
+removeVertex :: (Eq v, Hashable v) => v -> Graph e v -> Graph e v
+removeVertex v g =  vertices %~ (HS.delete v) $ edges %~ (HM.filterWithKey (\_ (v1, v2) -> not $ any (==v) [v1, v2])) $ g
+
+removeEdge :: (Eq e, Hashable e) => e -> Graph e v -> Graph e v
+removeEdge e = edges %~ (HM.delete e)
+
 insertEdge :: (Eq v, Eq e, Hashable v, Hashable e) => 
   e -> (v, v) -> Graph e v -> Graph e v 
 insertEdge !e !(v, v') (Graph vs es) = 
@@ -49,3 +55,6 @@ adjacentVertices !e (Graph _ es) = HM.lookup e es
 
 fromLists :: (Hashable e, Hashable v, Eq e, Eq v) => [v] -> [(e, v, v)] -> Graph e v
 fromLists vs es = insertEdges es $ insertVertices vs emptyGraph
+
+degree :: Eq v => v -> Graph e v -> Int
+degree v = length . connections v
