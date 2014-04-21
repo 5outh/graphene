@@ -7,16 +7,17 @@ import Data.List
 import Graphene.Graph
 import Control.Lens
 import Control.Monad.State
+import Control.Monad.Writer
 import Data.Ord
 
 makeLenses ''Graph
 
+-- Kruskal's minimum spanning tree algorithm
 kruskal :: (Ord v, Ord e) => Graph v e -> Graph v e
-kruskal g = view _3 $ execState go
-            ( map (:[]) (g^.vertices)
-              , sortBy (comparing (view _1)) $ g^.edges
-              , emptyGraph )
-  where go = do
+kruskal g = view _3 $ execState go (vertexSets, sortedEdges, emptyGraph)
+  where vertexSets = map (:[]) $ g^.vertices
+        sortedEdges = sortBy (comparing fst) $ g^.edges
+        go = do
           (vs, es, _) <- get
           unless (null es) $ do
             let e@(w, (v1, v2)) = head es
@@ -29,3 +30,16 @@ kruskal g = view _3 $ execState go
               _        -> return ()
             _2 %= tail
             go
+
+-- depth first search for connections of `v`
+dfs :: v  -> Graph v e -> (Graph v e, [v])
+dfs = undefined
+
+-- breadth first search for connections of `v`
+bfs :: v -> Graph v e -> (Graph v e, [v])
+bfs = undefined
+
+-- shortest path length from `v` to `w`
+dijkstra :: (Num e) => v -> v -> Graph v e -> e
+dijkstra = undefined
+
