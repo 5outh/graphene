@@ -1,6 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Graphene.Algorithms (
-  kruskal
+  kruskal,
+  dfs,
+  bfs,
+  dijkstra
 ) where
 
 import Data.List
@@ -34,15 +37,19 @@ kruskal g = view _3 $ execState go (vertexSets, sortedEdges, emptyGraph)
 -- depth first search for connections of `v`
 dfs :: Eq v => v -> Graph e v -> [v]
 dfs v g = case ns of 
-  [] -> []
-  _  -> v : concatMap (flip dfs (removeVertices ns g)) (neighbors v g)
-  where ns = neighbors v g
+  [] -> [v] -- only v if empty
+  _  -> v : concatMap (\w -> dfs w (g' w)) ns     -- dfs each graph with w and neighbors removed
+  where ns   = neighbors v g                      -- neighbor vertices of v
+        g' w = removeVertices (v : delete w ns) g -- remove neighbors (except next hop)
 
 -- breadth first search for connections of `v`
-bfs :: v -> Graph v e -> (Graph v e, [v])
-bfs v g = undefined
+bfs :: Eq v => v -> Graph e v -> [v]
+bfs v g = go (neighbors v g) g
+  where go []     _ = []
+        go (x:xs) g = x : go (ns ++ xs) (removeVertex x g)
+         where ns = neighbors x g
 
 -- shortest path length from `v` to `w`
-dijkstra :: (Num e) => v -> v -> Graph v e -> e
+dijkstra :: (Num e) => v -> v -> Graph e v -> e
 dijkstra = undefined
 

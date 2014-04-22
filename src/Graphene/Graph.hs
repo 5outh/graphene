@@ -14,7 +14,10 @@ module Graphene.Graph(
   neighbors,
   adjacentVertices,
   fromLists,
-  degree
+  degree,
+  subgraph,
+  moveFromTo,
+  moveFromThrough
 ) where
 
 import Data.Hashable
@@ -32,8 +35,10 @@ makeLenses ''Graph
 emptyGraph :: Graph e v
 emptyGraph = Graph [] []
 
-insertVertex :: v -> Graph e v -> Graph e v
-insertVertex !v (Graph vs es) = Graph (v:vs) es
+insertVertex :: (Eq v) => v -> Graph e v -> Graph e v
+insertVertex !v g@(Graph vs es) 
+  | v `elem` vs = g
+  | otherwise   = Graph (v:vs) es
 
 removeVertex :: Eq v => v -> Graph e v -> Graph e v
 removeVertex !v g = vertices %~ (delete v) 
@@ -45,14 +50,14 @@ removeVertices vs g = foldl' (flip removeVertex) g vs
 removeEdge :: Eq e => e -> Graph e v -> Graph e v
 removeEdge !e = edges %~ (deleteBy ((==) `on` fst) (e, undefined))
 
-insertEdge :: e -> (v, v) -> Graph e v -> Graph e v 
+insertEdge :: Eq v => e -> (v, v) -> Graph e v -> Graph e v 
 insertEdge !e !(v, v') (Graph vs es) = 
   foldr insertVertex (Graph vs ((e, (v, v')):es)) [v, v']
   
 insertVertices :: (Eq b) => [b] -> Graph e b -> Graph e b
 insertVertices vs g = foldl' (flip insertVertex) g vs
 
-insertEdges :: [(e, v, v)] -> Graph e v -> Graph e v
+insertEdges :: Eq v => [(e, v, v)] -> Graph e v -> Graph e v
 insertEdges es g = foldl' (\g (e, v1, v2) -> insertEdge e (v1, v2) g) g es 
 
 connections :: (Eq v) => v -> Graph e v -> [(e, (v, v))]
@@ -79,4 +84,16 @@ degree !v = length . connections v
 subgraph :: Eq v => [v] -> Graph e v -> Graph e v
 subgraph ws (Graph vs es) = Graph vs' es'
   where vs' = filter (`elem` ws) vs
-        es' = filter (\(e, (v1, v2)) -> any (`elem` ws) [v1, v2]) es
+        es' = filter (\(e, (v1, v2)) -> all (`elem` ws) [v1, v2]) es
+
+-- move to a adjacent vertex (returns the next vertex if it really is connected)
+moveFromTo :: Eq v => v -> v -> Graph e v -> Maybe v
+moveFromTo v w g = if w `elem` ns then Just w else Nothing 
+  where ns = neighbors v g
+
+-- follow an edge to a new adjancent vertex (returns the new vertex)
+moveFromThrough :: (Eq v, Eq e) => v -> e -> Graph e v -> Maybe v
+moveFromThrough v e g = case lookup e conns of
+    Nothing -> Nothing
+    Just (v1, v2) -> Just $ if v == v1 then v2 else v1
+  where conns = connections v g
