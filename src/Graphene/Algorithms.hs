@@ -32,12 +32,15 @@ kruskal g = view _3 $ execState go (vertexSets, sortedEdges, emptyGraph)
             go
 
 -- depth first search for connections of `v`
-dfs :: v  -> Graph v e -> (Graph v e, [v])
-dfs = undefined
+dfs :: Eq v => v -> Graph e v -> [v]
+dfs v g = case ns of 
+  [] -> []
+  _  -> v : concatMap (flip dfs (removeVertices ns g)) (neighbors v g)
+  where ns = neighbors v g
 
 -- breadth first search for connections of `v`
 bfs :: v -> Graph v e -> (Graph v e, [v])
-bfs = undefined
+bfs v g = undefined
 
 -- shortest path length from `v` to `w`
 dijkstra :: (Num e) => v -> v -> Graph v e -> e
