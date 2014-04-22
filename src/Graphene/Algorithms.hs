@@ -44,9 +44,9 @@ dfs v g = case ns of
 
 -- breadth first search for connections of `v`
 bfs :: Eq v => v -> Graph e v -> [v]
-bfs v g = go (neighbors v g) g
+bfs v g = go [v] g
   where go []     _ = []
-        go (x:xs) g = x : go (ns ++ xs) (removeVertex x g)
+        go (x:xs) g = x : go (xs ++ ns) (removeVertex x g)
          where ns = neighbors x g
 
 -- shortest path length from `v` to `w`
