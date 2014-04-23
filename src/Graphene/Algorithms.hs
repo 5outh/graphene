@@ -60,18 +60,21 @@ dijkstra v g' = setup
 
 
 -- Graph, visited, unvisited
-runDijkstra :: (Eq v, Eq e, Num e, Ord e) => State (Graph e (v, Int), [(v, Int)], [(v, Int)]) [(v, Int)]
+runDijkstra :: (Eq v) => State (Graph Int (v, Int), [(v, Int)], [(v, Int)]) [(v, Int)]
 runDijkstra = do
   (g, visited, unvisited) <- get
   if null unvisited 
     then return visited
     else do
       let (v@(vertex, weight):_) = sortBy (comparing snd) unvisited
-          conns = map (\(e, (v1, v2)) -> (e, if v1 == v then v2 else v1) ) $ connections v g -- [(weight, (v, v_weight))]
-      --_1 .= newGraph
-      _2 %= (v:)
-      _3 %= tail
-      return visited
+          conns = map (\(e, (v1, v2)) -> (e, if v1 == v then v2 else v1) ) $ connections v g -- [(eWeight, (v, vWeight))]
+          g'    = foldr f g conns
+          f (eWeight, w@(v, vWeight)) graph = modifyVertex (const (v, min (eWeight + weight) vWeight)) w graph
+      do 
+        _1 .= (removeVertex v g')
+        _2 %= (v:)
+        _3 %= tail
+        runDijkstra
 
 -- propagate edge weights to each neighbor's weight, and delete the start vertex
 propagate :: (Eq v, Eq a, Num a, Ord a) => (v, a) -> Graph a (v, a) -> Graph a (v, a)
