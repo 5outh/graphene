@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, NoMonomorphismRestriction #-}
+{-# LANGUAGE TemplateHaskell, NoMonomorphismRestriction, TupleSections #-}
 module Graphene.Algorithms (
   kruskal,
   dfs,
@@ -7,12 +7,14 @@ module Graphene.Algorithms (
 ) where
 
 import Data.List
+import qualified Data.Map as M
 import Graphene.Graph
 import Control.Lens
-import Control.Monad.State
 import Control.Monad.Writer
+import Control.Monad.Trans.State
 import Data.Ord
 import Data.Bifunctor
+import Data.Maybe
 
 makeLenses ''Graph
 
@@ -50,36 +52,50 @@ bfs v g = go [v] g
         go (x:xs) g = x : go (xs ++ ns) (removeVertex x g)
          where ns = neighbors x g
 
--- Label each edge with distance of shortest path from v
--- dijkstra :: (Num e) => v -> Graph e v -> e
-dijkstra v g' = setup
-  where setup = flip second g' $ \w -> case w == v of -- initialize weights
-                  True -> (w, 0)
-                  _    -> (w, maxBound :: Int) -- "infinity"
-        go = undefined
+-- test
+sg :: Graph Int Char
+sg = fromLists ['a'..'e'] (zip3 [1..5] ['a'..'d'] ['b'..'e'])
 
+data DijkstraState e v = DijkstraState{
+    _underlyingGraph :: Graph e v
+  , _distancePairings :: M.Map v Int
+  , _unvisited :: [v]
+  , _visited :: [v]
+  , _from :: v
+} deriving (Show, Eq)
+
+makeLenses ''DijkstraState
+
+-- smart constructor for dijkstra state
+mkDijkstra :: (Eq v, Ord v) => Graph e v -> v -> DijkstraState e v
+mkDijkstra g@(Graph vs es) v = 
+  DijkstraState 
+    g 
+    ( M.fromList ( (v, 0) : (map (, (maxBound :: Int) ) $ delete v vs) ) )
+    vs  
+    [] 
+    v
+
+dijkstra g = runStateT runDijkstra . mkDijkstra g
 
 -- Graph, visited, unvisited
-runDijkstra :: (Eq v) => State (Graph Int (v, Int), [(v, Int)], [(v, Int)]) [(v, Int)]
+-- NB. ints are weights
+runDijkstra :: (Eq v, Show v, Ord v) => StateT (DijkstraState Int v) IO ()
 runDijkstra = do
-  (g, visited, unvisited) <- get
-  if null unvisited 
-    then return visited
-    else do
-      let (v@(vertex, weight):_) = sortBy (comparing snd) unvisited
-          conns = map (\(e, (v1, v2)) -> (e, if v1 == v then v2 else v1) ) $ connections v g -- [(eWeight, (v, vWeight))]
-          g'    = foldr f g conns
-          f (eWeight, w@(v, vWeight)) graph = modifyVertex (const (v, min (eWeight + weight) vWeight)) w graph
-      do 
-        _1 .= (removeVertex v g')
-        _2 %= (v:)
-        _3 %= tail
-        runDijkstra
+  q   <- use unvisited
+  unless (null q) $ do
+    dists <- use distancePairings
+    g     <- use underlyingGraph
+    let ordered@(u:_)  = sortBy (comparing (flip M.lookup dists)) q
+        (Just uWeight) = M.lookup u dists -- weight stored at `u`
+        ns             = neighbors u g
+        conns          = map (\(e, (v1, v2)) -> (e, if v1 == u then v2 else v1) ) $ connections u g
+    unvisited %= (delete u) -- remove u from q
+    unless ( uWeight == (maxBound :: Int) ) $ do
+      zoom distancePairings $ updateWeights uWeight conns
+      return ()
 
--- propagate edge weights to each neighbor's weight, and delete the start vertex
-propagate :: (Eq v, Eq a, Num a, Ord a) => (v, a) -> Graph a (v, a) -> Graph a (v, a)
-propagate v@(_, weight) g = 
-    removeVertex v 
-  $ foldr (\(e, w) -> modifyVertex (_2 %~ (min (weight + e))) w) g conns
-    where conns =  map (\(e, (v1, v2)) -> (e, if v1 == v then v2 else v1) ) 
-                 $ connections v g
+updateWeights :: (Ord v, Monad m) => Int -> [(Int, v)] -> StateT (M.Map v Int) m ()
+updateWeights vWeight conns = do
+  dists <- get
+  forM_ conns $ \(eWeight, v) -> modify (M.adjust (min (eWeight + vWeight)) v)

@@ -5,7 +5,9 @@ module Graphene.Graph(
   emptyGraph,
   insertVertex,
   removeVertex,
+  removeVertex',
   removeVertices,
+  removeVertices',
   removeEdge,
   insertEdge,
   insertVertices,
@@ -40,8 +42,14 @@ removeVertex :: Eq v => v -> Graph e v -> Graph e v
 removeVertex !v g = vertices %~ (delete v) 
   $ edges %~ (filter (\(_, (v1, v2)) -> not $ any (==v) [v1, v2])) $ g
 
+removeVertex' :: Eq v => v -> Graph e v -> Graph e v
+removeVertex' !v =  vertices %~ (delete v)
+
 removeVertices :: Eq v => [v] -> Graph e v -> Graph e v
 removeVertices vs g = foldl' (flip removeVertex) g vs
+
+removeVertices' :: Eq v => [v] -> Graph e v -> Graph e v
+removeVertices' vs g = foldl' (flip removeVertex') g vs
 
 removeEdge :: Eq e => e -> Graph e v -> Graph e v
 removeEdge !e = edges %~ (deleteBy ((==) `on` fst) (e, undefined))
