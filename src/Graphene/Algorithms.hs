@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, NoMonomorphismRestriction #-}
 module Graphene.Algorithms (
   kruskal,
   dfs,
@@ -12,6 +12,7 @@ import Control.Lens
 import Control.Monad.State
 import Control.Monad.Writer
 import Data.Ord
+import Data.Bifunctor
 
 makeLenses ''Graph
 
@@ -49,7 +50,33 @@ bfs v g = go [v] g
         go (x:xs) g = x : go (xs ++ ns) (removeVertex x g)
          where ns = neighbors x g
 
--- shortest path length from `v` to `w`
-dijkstra :: (Num e) => v -> v -> Graph e v -> e
-dijkstra = undefined
+-- Label each edge with distance of shortest path from v
+-- dijkstra :: (Num e) => v -> Graph e v -> e
+dijkstra v g' = setup
+  where setup = flip second g' $ \w -> case w == v of -- initialize weights
+                  True -> (w, 0)
+                  _    -> (w, maxBound :: Int) -- "infinity"
+        go = undefined
 
+
+-- Graph, visited, unvisited
+runDijkstra :: (Eq v, Eq e, Num e, Ord e) => State (Graph e (v, Int), [(v, Int)], [(v, Int)]) [(v, Int)]
+runDijkstra = do
+  (g, visited, unvisited) <- get
+  if null unvisited 
+    then return visited
+    else do
+      let (v@(vertex, weight):_) = sortBy (comparing snd) unvisited
+          conns = map (\(e, (v1, v2)) -> (e, if v1 == v then v2 else v1) ) $ connections v g -- [(weight, (v, v_weight))]
+      --_1 .= newGraph
+      _2 %= (v:)
+      _3 %= tail
+      return visited
+
+-- propagate edge weights to each neighbor's weight, and delete the start vertex
+propagate :: (Eq v, Eq a, Num a, Ord a) => (v, a) -> Graph a (v, a) -> Graph a (v, a)
+propagate v@(_, weight) g = 
+    removeVertex v 
+  $ foldr (\(e, w) -> modifyVertex (_2 %~ (min (weight + e))) w) g conns
+    where conns =  map (\(e, (v1, v2)) -> (e, if v1 == v then v2 else v1) ) 
+                 $ connections v g

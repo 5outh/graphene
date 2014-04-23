@@ -10,6 +10,8 @@ module Graphene.Graph(
   insertEdge,
   insertVertices,
   insertEdges,
+  modifyVertex,
+  modifyEdge,
   connections,
   neighbors,
   adjacentVertices,
@@ -24,16 +26,10 @@ import Data.Hashable
 import Data.List
 import Data.Function
 import Control.Lens
-
-data Graph e v = Graph
-  { _vertices :: [v]
-  , _edges    :: [(e, (v, v))]
-  } deriving (Show, Eq)
+import Graphene.Instances
+import Data.Bifunctor
 
 makeLenses ''Graph
-
-emptyGraph :: Graph e v
-emptyGraph = Graph [] []
 
 insertVertex :: (Eq v) => v -> Graph e v -> Graph e v
 insertVertex !v g@(Graph vs es) 
@@ -53,6 +49,12 @@ removeEdge !e = edges %~ (deleteBy ((==) `on` fst) (e, undefined))
 insertEdge :: Eq v => e -> (v, v) -> Graph e v -> Graph e v 
 insertEdge !e !(v, v') (Graph vs es) = 
   foldr insertVertex (Graph vs ((e, (v, v')):es)) [v, v']
+
+modifyVertex :: Eq v => (v -> v) -> v -> Graph e v -> Graph e v
+modifyVertex f v = second (\w -> if v == w then f v else v)
+
+modifyEdge :: Eq e => (e -> e) -> e -> Graph e v -> Graph e v
+modifyEdge f e = first (\e' -> if e == e' then f e' else e')
   
 insertVertices :: (Eq b) => [b] -> Graph e b -> Graph e b
 insertVertices vs g = foldl' (flip insertVertex) g vs

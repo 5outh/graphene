@@ -1,7 +1,9 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Graphene.Instances where
+module Graphene.Instances(
+  Graph(..),
+  emptyGraph
+)where
 
-import Graphene.Graph
 import Control.Lens
 
 import Data.Bifunctor
@@ -10,7 +12,15 @@ import Data.Bifoldable
 import Data.Traversable
 import Data.Monoid
 
+data Graph e v = Graph
+  { _vertices :: [v]
+  , _edges    :: [(e, (v, v))]
+  } deriving (Show, Eq)
+
 makeLenses ''Graph
+
+emptyGraph :: Graph e v
+emptyGraph = Graph [] []
 
 -- map over vertices
 instance Functor (Graph e) where
