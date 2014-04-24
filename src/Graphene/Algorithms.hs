@@ -59,6 +59,7 @@ sg = fromLists ['a'..'e'] (zip3 [1..5] ['a'..'d'] ['b'..'e'])
 data DijkstraState e v = DijkstraState{
     _underlyingGraph :: Graph e v
   , _distancePairings :: M.Map v Int
+  , _prevs :: M.Map v (Maybe v)
   , _unvisited :: [v]
   , _visited :: [v]
   , _from :: v
@@ -68,19 +69,16 @@ makeLenses ''DijkstraState
 
 -- smart constructor for dijkstra state
 mkDijkstra :: (Eq v, Ord v) => Graph e v -> v -> DijkstraState e v
-mkDijkstra g@(Graph vs es) v = 
-  DijkstraState 
-    g 
-    ( M.fromList ( (v, 0) : (map (, (maxBound :: Int) ) $ delete v vs) ) )
-    vs  
-    [] 
-    v
+mkDijkstra g@(Graph vs es) v = DijkstraState g dists prevs vs [] v
+  where dists = M.fromList ( (v, 0) : (map (, (maxBound :: Int) ) $ delete v vs) )
+        prevs = M.fromList $ zip vs (repeat Nothing) 
 
-dijkstra g = runStateT runDijkstra . mkDijkstra g
+dijkstra :: (Eq v, Ord v) => Graph Int v -> v -> DijkstraState Int v
+dijkstra g = execState runDijkstra . mkDijkstra g
 
 -- Graph, visited, unvisited
 -- NB. ints are weights
-runDijkstra :: (Eq v, Show v, Ord v) => StateT (DijkstraState Int v) IO ()
+runDijkstra :: (Eq v, Ord v) => State (DijkstraState Int v) ()
 runDijkstra = do
   q   <- use unvisited
   unless (null q) $ do
@@ -88,14 +86,16 @@ runDijkstra = do
     g     <- use underlyingGraph
     let ordered@(u:_)  = sortBy (comparing (flip M.lookup dists)) q
         (Just uWeight) = M.lookup u dists -- weight stored at `u`
-        ns             = neighbors u g
-        conns          = map (\(e, (v1, v2)) -> (e, if v1 == u then v2 else v1) ) $ connections u g
+        conns          = map (\(e, (v1, v2)) -> (e, if v1 == u then v2 else v1)) 
+                       $ connections u g
     unvisited %= (delete u) -- remove u from q
     unless ( uWeight == (maxBound :: Int) ) $ do
-      zoom distancePairings $ updateWeights uWeight conns
-      return ()
-
-updateWeights :: (Ord v, Monad m) => Int -> [(Int, v)] -> StateT (M.Map v Int) m ()
-updateWeights vWeight conns = do
-  dists <- get
-  forM_ conns $ \(eWeight, v) -> modify (M.adjust (min (eWeight + vWeight)) v)
+      -- update distances
+      forM_ conns $ \(eWeight, v) -> do
+        let (Just vWeight) = M.lookup v dists
+            newWeight      = eWeight + uWeight
+        unless (newWeight > vWeight) $ do
+          distancePairings %= (M.insert v newWeight)
+          prevs %= (M.insert v (Just u))
+      visited %= (u:)
+      runDijkstra
