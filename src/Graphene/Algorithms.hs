@@ -21,21 +21,21 @@ makeLenses ''Graph
 -- Kruskal's minimum spanning tree algorithm
 kruskal :: (Ord v, Ord e) => Graph v e -> Graph v e
 kruskal g = view _3 $ execState go (vertexSets, sortedEdges, emptyGraph)
-  where vertexSets = map (:[]) $ g^.vertices
-        sortedEdges = sortBy (comparing fst) $ g^.edges
+  where vertexSets = map (:[]) $ g^.vertices            -- list of singletons for each vertex
+        sortedEdges = sortBy (comparing fst) $ g^.edges -- edges sorted by weight
         go = do
           (vs, es, _) <- get
-          unless (null es) $ do
-            let e@(w, (v1, v2)) = head es
-                ss = filter (\s -> any (`elem` s) [v1, v2]) vs
+          unless (null es) $ do                         -- break if no edges left
+            let e@(w, (v1, v2)) = head es               -- find edge with least weight
+                ss = filter (\s -> any (`elem` s) [v1, v2]) vs -- find vertices connected to e
             case ss of 
-              [s1, s2] -> do
-                _3.vertices %= union ([v1, v2])
-                _3.edges    %= insert e
-                _1          %= delete s1 . delete s2 . insert (s1 `union` s2)
-              _        -> return ()
-            _2 %= tail
-            go
+              [s1, s2] -> do                    -- if we find two separate sets for v1 and v2,
+                _3.vertices %= union ([v1, v2]) -- union the sets
+                _3.edges    %= insert e         -- insert e into the resulting tree
+                _1          %= delete s1 . delete s2 . insert (s1 `union` s2) -- merge s1 and s2
+              _        -> return () -- otherwise, continue
+            _2 %= tail              -- remove first element of sortedEdges
+            go                      -- recursively call algorithm
 
 -- depth first search for connections of `v`
 dfs :: Eq v => v -> Graph e v -> [v]
@@ -85,8 +85,7 @@ dijkstra g = execState go . mkDijkstra g
  where go :: (Eq v, Ord v) => State (DijkstraState Int v) ()
        go = do
          q   <- use unvisited
-         -- if unvisited set is empty, complete.
-         unless (null q) $ do 
+         unless (null q) $ do  -- if unvisited set is empty, complete.
            dists <- use distancePairings
            g     <- use underlyingGraph
            let u  = minimumBy (comparing (flip M.lookup dists)) q -- find vertex with min. weight
@@ -97,8 +96,7 @@ dijkstra g = execState go . mkDijkstra g
            unvisited %= (delete u) -- remove u from q
            -- if current weight is infinity, the graph is disconnected, so end.
            unless ( uWeight == infinity ) $ do
-             -- update distances
-             forM_ conns $ \(eWeight, v) -> do
+             forM_ conns $ \(eWeight, v) -> do -- update distances
                let (Just vWeight) = M.lookup v dists
                    newWeight      = eWeight + uWeight
                -- only update previous vertex and distance a smaller distance was found

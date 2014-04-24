@@ -5,20 +5,16 @@ module Graphene.Instances(
 )where
 
 import Control.Lens
-
 import Data.Bifunctor
 import qualified Data.Foldable as F
 import Data.Bifoldable
 import Data.Traversable
 import Data.Monoid
-
-data Graph e v = Graph
-  { _vertices :: [v]
-  , _edges    :: [(e, (v, v))]
-  } deriving (Show, Eq)
+import Graphene.Class
 
 makeLenses ''Graph
 
+-- a graph with no vertices or edges
 emptyGraph :: Graph e v
 emptyGraph = Graph [] []
 
