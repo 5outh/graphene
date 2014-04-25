@@ -18,7 +18,7 @@ import Data.Maybe
 
 makeLenses ''Graph
 
--- Kruskal's minimum spanning tree algorithm
+-- | Kruskal's minimum spanning tree algorithm
 kruskal :: (Ord v, Ord e) => Graph v e -> Graph v e
 kruskal g = view _3 $ execState go (vertexSets, sortedEdges, emptyGraph)
   where vertexSets = map (:[]) $ g^.vertices            -- list of singletons for each vertex
@@ -37,7 +37,7 @@ kruskal g = view _3 $ execState go (vertexSets, sortedEdges, emptyGraph)
             _2 %= tail              -- remove first element of sortedEdges
             go                      -- recursively call algorithm
 
--- depth first search for connections of `v`
+-- | Depth first search for connections of `v`
 dfs :: Eq v => v -> Graph e v -> [v]
 dfs v g = case ns of 
   [] -> [v] -- only v if empty
@@ -45,7 +45,7 @@ dfs v g = case ns of
   where ns   = neighbors v g                      -- neighbor vertices of v
         g' w = removeVertices (v : delete w ns) g -- remove neighbors (except next hop)
 
--- breadth first search for connections of `v`
+-- | Breadth first search for connections of `v`
 bfs :: Eq v => v -> Graph e v -> [v]
 bfs v g = go [v] g
   where go []     _ = []
@@ -59,27 +59,27 @@ sg = fromLists ['a'..'e'] (zip3 [1..5] ['a'..'d'] ['b'..'e'])
 infinity :: Int
 infinity = maxBound -- you get the idea
 
--- Container for Dijkstra's algorithm information
+-- | Container for Dijkstra's algorithm information
 data DijkstraState e v = DijkstraState{
-    _underlyingGraph :: Graph e v     -- Graph to run algorithm on 
-  , _distancePairings :: M.Map v Int  -- Mapping from Vertices to Distances
-  , _prevs :: M.Map v (Maybe v)       -- Mapping from Vertices to previous vertices
-  , _unvisited :: [v]                 -- Set of unvisited vertices
-  , _visited :: [v]                   -- Set to visited vertices
-  , _from :: v                        -- Vertex to generate distances from
+    _underlyingGraph :: Graph e v     -- | Graph to run algorithm on 
+  , _distancePairings :: M.Map v Int  -- | Mapping from Vertices to Distances
+  , _prevs :: M.Map v (Maybe v)       -- | Mapping from Vertices to previous vertices
+  , _unvisited :: [v]                 -- | Set of unvisited vertices
+  , _visited :: [v]                   -- | Set to visited vertices
+  , _from :: v                        -- | Vertex to generate distances from
 } deriving (Show, Eq)
 
 makeLenses ''DijkstraState
 
--- smart constructor for dijkstra state
--- Initialize dist(v) to 0, the rest to inifinity
--- Initialize previous vertices to nothing
+-- | smart constructor for dijkstra state
+-- | Initialize dist(v) to 0, the rest to inifinity
+-- | Initialize previous vertices to nothing
 mkDijkstra :: (Eq v, Ord v) => Graph e v -> v -> DijkstraState e v
 mkDijkstra g@(Graph vs es) v = DijkstraState g dists prevs vs [] v
   where dists = M.fromList ( (v, 0) : (map (, infinity) $ delete v vs) )
         prevs = M.fromList $ zip vs (repeat Nothing) 
 
--- run dijkstra's algorithm on a graph starting at vertex v
+-- | Run dijkstra's algorithm on a graph starting at vertex v
 dijkstra :: (Eq v, Ord v) => Graph Int v -> v -> DijkstraState Int v
 dijkstra g = execState go . mkDijkstra g
  where go :: (Eq v, Ord v) => State (DijkstraState Int v) ()
@@ -91,8 +91,7 @@ dijkstra g = execState go . mkDijkstra g
            let u  = minimumBy (comparing (flip M.lookup dists)) q -- find vertex with min. weight
                (Just uWeight) = M.lookup u dists                  -- u's weight
                -- list of edges (weights) and the vertices they point to
-               conns          = map (\(e, (v1, v2)) -> (e, if v1 == u then v2 else v1)) 
-                              $ connections u g
+               conns          = connections u g
            unvisited %= (delete u) -- remove u from q
            -- if current weight is infinity, the graph is disconnected, so end.
            unless ( uWeight == infinity ) $ do

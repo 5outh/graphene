@@ -58,4 +58,7 @@ library
                 , hashable >=1.1
                 , unordered-containers >=0.2.1.0
                 , lens >=4.0
-  
+                , mtl >=0.2
+                , transformers >=0.3
+                , bifunctors >=4.1
+                , containers >=0.5
