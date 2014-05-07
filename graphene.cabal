@@ -10,10 +10,10 @@ name:                graphene
 -- PVP summary:      +-+------- breaking API changes
 --                   | | +----- non-breaking API additions
 --                   | | | +--- code changes with no API change
-version:             0.1.0.0
+version:             0.1.0.3
 
 -- A short (one-line) description of the package.
-synopsis:            Graph Library built as a final project for a Graph Theory class
+synopsis: A minimal Graph Theory library.
 
 -- A longer description of the package.
 -- description:         
@@ -22,7 +22,7 @@ synopsis:            Graph Library built as a final project for a Graph Theory c
 homepage:            https://github.com/5outh/graphene
 
 -- The license under which the package is released.
--- license:             
+license: MIT             
 
 -- The file containing the license text.
 license-file:        LICENSE
@@ -48,7 +48,11 @@ library
   hs-source-dirs: src
   -- Modules exported by the library.
   exposed-modules: Graphene
-                 , Graphene.Graph   
+                 , Graphene.Graph
+                 , Graphene.IO
+                 , Graphene.Algorithms
+                 , Graphene.Class
+                 , Graphene.Instances   
   
   -- Modules included in this library but not exported.
   -- other-modules:       
