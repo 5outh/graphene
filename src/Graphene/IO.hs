@@ -7,7 +7,9 @@ import Graphene.Graph
 import Control.Monad(liftM)
 import Control.Monad.Trans(lift)
 import Control.Monad.Trans.State
-import Control.Lens
+import Lens.Family2
+import Lens.Family2.Stock
+import Lens.Family2.State
 
 exploreFrom :: (Eq v, Eq e, Show v, Show e, Read e) => v -> Graph e v -> IO ()
 exploreFrom v g = evalStateT go (v, g)

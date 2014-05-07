@@ -4,15 +4,13 @@ module Graphene.Instances(
   emptyGraph
 )where
 
-import Control.Lens
+import Lens.Family2
 import Data.Bifunctor
 import qualified Data.Foldable as F
 import Data.Bifoldable
 import Data.Traversable
 import Data.Monoid
 import Graphene.Class
-
-makeLenses ''Graph
 
 -- | a graph with no vertices or edges
 emptyGraph :: Graph e v

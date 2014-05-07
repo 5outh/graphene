@@ -26,12 +26,11 @@ import Data.Hashable
 import Data.List
 import Data.Function
 import Data.Maybe(catMaybes)
-import Control.Lens
+import Lens.Family2
 import Data.Bifunctor
 import Graphene.Class
 import Graphene.Instances
 
-makeLenses ''Graph
 
 -- | Insert a vertex into a graph
 insertVertex :: (Eq v) => v -> Graph e v -> Graph e v

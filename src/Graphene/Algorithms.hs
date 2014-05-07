@@ -3,26 +3,42 @@ module Graphene.Algorithms (
   kruskal,
   dfs,
   bfs,
-  dijkstra
+  dijkstra,
+  DijkstraState,
+  underlyingGraph,
+  distancePairings,
+  prevs,
+  unvisited,
+  visited,
+  from
 ) where
 
 import Data.List
 import qualified Data.Map as M
 import Graphene.Graph
-import Control.Lens
+import Lens.Family2
+import Lens.Family2.State
 import Control.Monad.Writer
 import Control.Monad.Trans.State
 import Data.Ord
 import Data.Bifunctor
 import Data.Maybe
 
-makeLenses ''Graph
+_3 :: Lens' (a, b, c) c
+_3 k (a, b, c) = fmap (\c' -> (a, b, c')) (k c) 
+
+_2 :: Lens' (a, b, c) b
+_2 k (a, b, c) = fmap (\b' -> (a, b', c)) (k b) 
+
+_1 :: Lens' (a, b, c) a
+_1 k (a, b, c) = fmap (\a' -> (a', b, c)) (k a) 
 
 -- | Kruskal's minimum spanning tree algorithm
 kruskal :: (Ord v, Ord e) => Graph v e -> Graph v e
 kruskal g = view _3 $ execState go (vertexSets, sortedEdges, emptyGraph)
   where vertexSets = map (:[]) $ g^.vertices            -- list of singletons for each vertex
         sortedEdges = sortBy (comparing fst) $ g^.edges -- edges sorted by weight
+        go :: (Eq v, Ord v, Ord e) => State ([[v]], [(e, (v, v))], Graph e v) ()
         go = do
           (vs, es, _) <- get
           unless (null es) $ do                         -- break if no edges left
@@ -61,13 +77,32 @@ infinity = maxBound -- you get the idea
 
 -- | Container for Dijkstra's algorithm information
 data DijkstraState e v = DijkstraState{
-      _underlyingGraph :: Graph e v     -- | Graph to run algorithm on 
-    , _distancePairings :: M.Map v Int  -- | Mapping from Vertices to Distances
-    , _prevs :: M.Map v (Maybe v)       -- | Mapping from Vertices to previous vertices
-    , _unvisited :: [v]                 -- | Set of unvisited vertices
-    , _visited :: [v]                   -- | Set to visited vertices
-    , _from :: v                        -- | Vertex to generate distances from
-  } deriving (Show, Eq)
+      _underlyingGraph :: Graph e v     -- |Graph to run algorithm on 
+    , _distancePairings :: M.Map v Int  -- |Mapping from Vertices to Distances
+    , _prevs :: M.Map v (Maybe v)       -- |Mapping from Vertices to previous vertices
+    , _unvisited :: [v]                 -- |Set of unvisited vertices
+    , _visited :: [v]                   -- |Set to visited vertices
+    , _from :: v                        
+      -- ^Vertex to generate dijkstra paths from
+    } deriving (Show, Eq)
+
+underlyingGraph :: Lens' (DijkstraState e v) (Graph e v)
+underlyingGraph k (DijkstraState u d p un v f) = fmap (\u' -> DijkstraState u' d p un v f) (k u)
+
+distancePairings :: Lens' (DijkstraState e v) (M.Map v Int)
+distancePairings k (DijkstraState u d p un v f) = fmap (\d' -> DijkstraState u d' p un v f) (k d)
+
+prevs :: Lens' (DijkstraState e v) (M.Map v (Maybe v))
+prevs k (DijkstraState u d p un v f) = fmap (\p' -> DijkstraState u d p' un v f) (k p)
+
+unvisited :: Lens' (DijkstraState e v) [v]
+unvisited k (DijkstraState u d p un v f) = fmap (\un' -> DijkstraState u d p un' v f) (k un)
+
+visited :: Lens' (DijkstraState e v) [v]
+visited k (DijkstraState u d p un v f) = fmap (\v' -> DijkstraState u d p un v' f) (k v)
+
+from :: Lens' (DijkstraState e v) v
+from k (DijkstraState u d p un v f) = fmap (\f' -> DijkstraState u d p un v f') (k f)
 
 -- | smart constructor for dijkstra state
 -- | Initialize dist(v) to 0, the rest to inifinity
@@ -76,8 +111,6 @@ mkDijkstra :: (Eq v, Ord v) => Graph e v -> v -> DijkstraState e v
 mkDijkstra g@(Graph vs es) v = DijkstraState g dists prevs vs [] v
   where dists = M.fromList ( (v, 0) : (map (, infinity) $ delete v vs) )
         prevs = M.fromList $ zip vs (repeat Nothing) 
-
-makeLenses ''DijkstraState
 
 -- | Run dijkstra's algorithm on a graph starting at vertex v
 dijkstra :: (Eq v, Ord v) => Graph Int v -> v -> DijkstraState Int v
