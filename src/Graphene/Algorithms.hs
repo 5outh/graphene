@@ -61,15 +61,13 @@ infinity = maxBound -- you get the idea
 
 -- | Container for Dijkstra's algorithm information
 data DijkstraState e v = DijkstraState{
-    _underlyingGraph :: Graph e v     -- | Graph to run algorithm on 
-  , _distancePairings :: M.Map v Int  -- | Mapping from Vertices to Distances
-  , _prevs :: M.Map v (Maybe v)       -- | Mapping from Vertices to previous vertices
-  , _unvisited :: [v]                 -- | Set of unvisited vertices
-  , _visited :: [v]                   -- | Set to visited vertices
-  , _from :: v                        -- | Vertex to generate distances from
-} deriving (Show, Eq)
-
-makeLenses ''DijkstraState
+      _underlyingGraph :: Graph e v     -- | Graph to run algorithm on 
+    , _distancePairings :: M.Map v Int  -- | Mapping from Vertices to Distances
+    , _prevs :: M.Map v (Maybe v)       -- | Mapping from Vertices to previous vertices
+    , _unvisited :: [v]                 -- | Set of unvisited vertices
+    , _visited :: [v]                   -- | Set to visited vertices
+    , _from :: v                        -- | Vertex to generate distances from
+  } deriving (Show, Eq)
 
 -- | smart constructor for dijkstra state
 -- | Initialize dist(v) to 0, the rest to inifinity
@@ -78,6 +76,8 @@ mkDijkstra :: (Eq v, Ord v) => Graph e v -> v -> DijkstraState e v
 mkDijkstra g@(Graph vs es) v = DijkstraState g dists prevs vs [] v
   where dists = M.fromList ( (v, 0) : (map (, infinity) $ delete v vs) )
         prevs = M.fromList $ zip vs (repeat Nothing) 
+
+makeLenses ''DijkstraState
 
 -- | Run dijkstra's algorithm on a graph starting at vertex v
 dijkstra :: (Eq v, Ord v) => Graph Int v -> v -> DijkstraState Int v
