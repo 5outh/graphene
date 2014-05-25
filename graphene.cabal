@@ -58,7 +58,7 @@ library
   -- other-modules:       
   
   -- Other library packages from which modules are imported.
-  build-depends:  base ==4.6.*
+  build-depends:  base >=4.6
                 , lens-family ==1.0.0
                 , lens-family-core ==1.0.*
                 , transformers >=0.2.0 && <0.4
